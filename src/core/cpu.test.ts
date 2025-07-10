@@ -1011,6 +1011,62 @@ describe("6502 CPU", () => {
     });
   });
 
+  describe("INC / INX / INY Instructions", () => {
+    test("INC Zero Page", () => {
+      cpu.memory[0x0042] = 0x00;
+      cpu.memory[0x8000] = 0xe6;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.memory[0x0042]).toBe(0x01);
+    });
+
+    test("INC Zero Page,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x0043] = 0xff;
+      cpu.memory[0x8000] = 0xf6;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.memory[0x0043]).toBe(0x00);
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero flag
+    });
+
+    test("INC Absolute", () => {
+      cpu.memory[0x1234] = 0x7f;
+      cpu.memory[0x8000] = 0xee;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.memory[0x1234]).toBe(0x80);
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative flag
+    });
+
+    test("INC Absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x1235] = 0x03;
+      cpu.memory[0x8000] = 0xfe;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.memory[0x1235]).toBe(0x04);
+    });
+
+    test("INX increments X and sets flags", () => {
+      cpu.X = 0xff;
+      cpu.memory[0x8000] = 0xe8;
+      cpu.step();
+      expect(cpu.X).toBe(0x00);
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero
+    });
+
+    test("INY increments Y and sets flags", () => {
+      cpu.Y = 0x7f;
+      cpu.memory[0x8000] = 0xc8;
+      cpu.step();
+      expect(cpu.Y).toBe(0x80);
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative
+    });
+  });
+
   describe("LDA Tests", () => {
     test("0xa9 - LDA immediate loads value into A and sets flags", () => {
       cpu.memory[0x8000] = 0xa9; // LDA #$42

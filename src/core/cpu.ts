@@ -762,6 +762,63 @@ export class CPU {
       }
 
       /**
+       *    INC - Increment Memory by One
+       */
+      case 0xe6: {
+        const addr = this.read(this.PC++);
+        const value = (this.read(addr) + 1) & 0xff;
+        this.write(addr, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+
+      // INC Zero Page,X
+      case 0xf6: {
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        const value = (this.read(addr) + 1) & 0xff;
+        this.write(addr, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+
+      // INC Absolute
+      case 0xee: {
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        const value = (this.read(addr) + 1) & 0xff;
+        this.write(addr, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+
+      // INC Absolute,X
+      case 0xfe: {
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        const value = (this.read(addr & 0xffff) + 1) & 0xff;
+        this.write(addr & 0xffff, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+      /**
+       *    INX - Increment Index X by One
+       */
+      case 0xe8: {
+        this.X = (this.X + 1) & 0xff;
+        this.setZeroAndNegativeFlags(this.X);
+        break;
+      }
+      /**
+       *    INY - Increment Index Y by One
+       */
+      case 0xc8: {
+        this.Y = (this.Y + 1) & 0xff;
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      /**
        *    LDA - Load Accumulator with Memory
        */
       case 0xa9: {
@@ -793,14 +850,6 @@ export class CPU {
         const addr = (base + this.X) & 0xff;
         this.A = this.read(addr);
         this.setZeroAndNegativeFlags(this.A);
-        break;
-      }
-      /**
-       *    INX - Increment Index X by one
-       */
-      case 0xe8: {
-        this.X = (this.X + 1) & 0xff;
-        this.setZeroAndNegativeFlags(this.X);
         break;
       }
       /**
