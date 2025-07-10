@@ -657,6 +657,88 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x40).toBe(0);
     });
   });
+  describe("CMP Instructions", () => {
+    beforeEach(() => {
+      cpu.A = 0x50;
+    });
+
+    test("CMP immediate", () => {
+      cpu.memory[0x8000] = 0xc9; // CMP #$40
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry set
+      expect(cpu.SR & 0x02).toBe(0); // Zero clear
+      expect(cpu.SR & 0x80).toBe(0); // Negative clear
+    });
+
+    test("CMP zero page", () => {
+      cpu.memory[0x0042] = 0x30;
+      cpu.memory[0x8000] = 0xc5;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry set
+    });
+
+    test("CMP zero page,X", () => {
+      cpu.X = 0x02;
+      cpu.memory[0x0044] = 0x20;
+      cpu.memory[0x8000] = 0xd5;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01);
+    });
+
+    test("CMP absolute", () => {
+      cpu.memory[0x1234] = 0x10;
+      cpu.memory[0x8000] = 0xcd;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01);
+    });
+
+    test("CMP absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x1235] = 0x50;
+      cpu.memory[0x8000] = 0xdd;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero set
+    });
+
+    test("CMP absolute,Y", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x1235] = 0x40;
+      cpu.memory[0x8000] = 0xd9;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01);
+    });
+
+    test("CMP (indirect,X)", () => {
+      cpu.X = 0x04;
+      cpu.memory[0x0044] = 0x78;
+      cpu.memory[0x0045] = 0x56;
+      cpu.memory[0x5678] = 0x50;
+      cpu.memory[0x8000] = 0xc1;
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero set
+    });
+
+    test("CMP (indirect),Y", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x0040] = 0x00;
+      cpu.memory[0x0041] = 0x20;
+      cpu.memory[0x2001] = 0x10;
+      cpu.memory[0x8000] = 0xd1;
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01);
+    });
+  });
 
   describe("LDA Tests", () => {
     test("0xa9 - LDA immediate loads value into A and sets flags", () => {

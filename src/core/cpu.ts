@@ -489,6 +489,74 @@ export class CPU {
       /**
        *    CMP - Compare Memory with Accumulator
        */
+      case 0xc9: {
+        // CMP Immediate
+        const value = this.read(this.PC++);
+        this.cmp(value);
+        break;
+      }
+
+      case 0xc5: {
+        // CMP Zero Page
+        const addr = this.read(this.PC++);
+        this.cmp(this.read(addr));
+        break;
+      }
+
+      case 0xd5: {
+        // CMP Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        this.cmp(this.read(addr));
+        break;
+      }
+
+      case 0xcd: {
+        // CMP Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        this.cmp(this.read(addr));
+        break;
+      }
+
+      case 0xdd: {
+        // CMP Absolute,X
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        this.cmp(this.read(addr & 0xffff));
+        break;
+      }
+
+      case 0xd9: {
+        // CMP Absolute,Y
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.cmp(this.read(addr & 0xffff));
+        break;
+      }
+
+      case 0xc1: {
+        // CMP (Indirect,X)
+        const zp = (this.read(this.PC++) + this.X) & 0xff;
+        const lo = this.read(zp);
+        const hi = this.read((zp + 1) & 0xff);
+        const addr = (hi << 8) | lo;
+        this.cmp(this.read(addr));
+        break;
+      }
+
+      case 0xd1: {
+        // CMP (Indirect),Y
+        const zp = this.read(this.PC++);
+        const lo = this.read(zp);
+        const hi = this.read((zp + 1) & 0xff);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.cmp(this.read(addr & 0xffff));
+        break;
+      }
+
       /**
        *    CPX - Compare Memory and Index X
        */
