@@ -527,6 +527,77 @@ describe("6502 CPU", () => {
       expect(cpu.PC).toBe(0x8002);
     });
   });
+  describe("BRK Instruction", () => {
+    test("BRK sets interrupt flag and jumps to IRQ vector", () => {
+      cpu.memory[0xfffe] = 0x00;
+      cpu.memory[0xffff] = 0x90;
+      cpu.PC = 0x8000;
+      cpu.memory[0x8000] = 0x00; // BRK
+      cpu.step();
+      expect(cpu.SR & 0x04).toBe(0x04); // Break flag set
+      expect(cpu.PC).toBe(0x9000);
+    });
+  });
+
+  describe("BVC Instruction", () => {
+    test("BVC branches when overflow clear", () => {
+      cpu.SR &= ~0x40; // Clear overflow flag
+      cpu.memory[0x8000] = 0x50; // BVC
+      cpu.memory[0x8001] = 0x05;
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.PC).toBe(0x8002 + 5);
+    });
+
+    test("BVC does not branch when overflow set", () => {
+      cpu.SR |= 0x40; // Set overflow flag
+      cpu.memory[0x8000] = 0x50; // BVC
+      cpu.memory[0x8001] = 0x05;
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.PC).toBe(0x8002);
+    });
+  });
+
+  describe("BVS Instruction", () => {
+    test("BVS branches when overflow set", () => {
+      cpu.SR |= 0x40; // Set overflow flag
+      cpu.memory[0x8000] = 0x70; // BVS
+      cpu.memory[0x8001] = 0x05;
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.PC).toBe(0x8002 + 5);
+    });
+
+    test("BVS does not branch when overflow clear", () => {
+      cpu.SR &= ~0x40; // Clear overflow flag
+      cpu.memory[0x8000] = 0x70; // BVS
+      cpu.memory[0x8001] = 0x05;
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.PC).toBe(0x8002);
+    });
+  });
+
+  describe("CLC Instruction", () => {
+    test("CLC clears carry flag", () => {
+      cpu.SR |= 0x01; // Set carry flag
+      cpu.memory[0x8000] = 0x18; // CLC
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0);
+    });
+  });
+
+  describe("CLD Instruction", () => {
+    test("CLD clears decimal flag", () => {
+      cpu.SR |= 0x08; // Set decimal flag
+      cpu.memory[0x8000] = 0xd8; // CLD
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.SR & 0x08).toBe(0);
+    });
+  });
 
   describe("BCS Instruction", () => {
     test("BCS branches when carry set", () => {
@@ -547,7 +618,6 @@ describe("6502 CPU", () => {
       expect(cpu.PC).toBe(0x8002);
     });
   });
-
   describe("BEQ Instruction", () => {
     test("BEQ branches when zero set", () => {
       cpu.SR |= 0x02; // Zero flag set

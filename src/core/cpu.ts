@@ -302,9 +302,51 @@ export class CPU {
       /**
        *    BRK
        */
-      case 0x00: // BRK (Break)
+      case 0x00: {
+        // BRK
+        this.SR |= 0x10; // Set Break flag (bit 4)
+        this.SR |= 0x04; // Set Interrupt Disable flag (bit 2)
+        this.PC = this.readWord(0xfffe); // Jump to IRQ vector
+        break;
+      }
+      case 0x50: {
+        // BVC (branch if overflow clear)
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x40) === 0) {
+          // Overflow flag clear
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    BVS - Branch if Overflow Set
+       */
+      case 0x70: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x40) !== 0) {
+          // Overflow flag set
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    CLC - Clear Carry Flag
+       */
+      case 0x18: {
+        this.SR &= ~0x01;
         this.PC++;
         break;
+      }
+      /**
+       *    CLD - Clear Decimal Flag
+       */
+      case 0xd8: {
+        this.SR &= ~0x08;
+        this.PC++;
+        break;
+      }
       /**
        *    BCC
        */
