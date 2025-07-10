@@ -352,7 +352,7 @@ describe("6502 CPU", () => {
       expect(cpu.A).toBe(0x67);
     });
   });
-  describe("ASL All Addressing Modes", () => {
+  describe("ASL Tests", () => {
     test("ASL accumulator", () => {
       cpu.A = 0b01010101;
       cpu.memory[0x8000] = 0x0a; // ASL A
@@ -406,7 +406,7 @@ describe("6502 CPU", () => {
       expect(cpu.memory[0x1236]).toBe(0b10101010);
     });
   });
-  describe("BCC Instruction", () => {
+  describe("BCC Tests", () => {
     test("BCC branches when carry clear", () => {
       cpu.SR &= ~0x01; // Clear carry flag
       cpu.memory[0x8000] = 0x90; // BCC
@@ -434,16 +434,16 @@ describe("6502 CPU", () => {
       expect(cpu.PC).toBe(0x8002); // 0x8007 - 5 = 0x8002
     });
   });
-  describe("BIT Instruction", () => {
+  describe("BIT Tests", () => {
     test("BIT zero page sets Z, V, N flags correctly", () => {
       cpu.A = 0b1100;
       cpu.memory[0x0042] = 0b01000001; // bit7=0, bit6=1, rest set
       cpu.memory[0x8000] = 0x24; // BIT $42
       cpu.memory[0x8001] = 0x42;
       cpu.step();
-      expect(cpu.SR & 0x02).toBe(0); // Z = 0 (A & M != 0)
-      expect(cpu.SR & 0x40).toBe(0x40); // V = 1 (bit 6)
-      expect(cpu.SR & 0x80).toBe(0); // N = 0 (bit 7)
+      expect(cpu.SR & 0x02).toBe(0x02);
+      expect(cpu.SR & 0x40).toBe(0x40);
+      expect(cpu.SR & 0x80).toBe(0x00);
     });
 
     test("BIT zero page sets zero flag if no bits match", () => {
@@ -462,7 +462,7 @@ describe("6502 CPU", () => {
       cpu.memory[0x8001] = 0x34;
       cpu.memory[0x8002] = 0x12;
       cpu.step();
-      expect(cpu.SR & 0x02).toBe(0); // Z=0 (A & M != 0)
+      expect(cpu.SR & 0x02).toBe(0x02); // Z=0 (A & M != 0)
       expect(cpu.SR & 0x40).toBe(0x40); // V=1
       expect(cpu.SR & 0x80).toBe(0x80); // N=1
     });

@@ -340,11 +340,13 @@ export class CPU {
         const addr = this.read(this.PC++);
         const value = this.read(addr);
         const result = this.A & value;
+        console.log("Before:", this.SR.toString(2));
         this.SR =
-          (this.SR & ~(0x02 | 0x40 | 0x80)) | // Clear Z, V, N flags
-          (result === 0 ? 0x02 : 0) | // Set Z if result==0
-          (value & 0x40) | // Set V from bit 6 of memory
-          (value & 0x80); // Set N from bit 7 of memory
+          (this.SR & ~(0x02 | 0x40 | 0x80)) |
+          (result === 0 ? 0x02 : 0) |
+          (value & 0x40) |
+          (value & 0x80);
+        console.log("After:", this.SR.toString(2));
         break;
       }
 
