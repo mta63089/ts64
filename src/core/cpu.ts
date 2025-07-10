@@ -72,6 +72,26 @@ export class CPU {
     else this.SR &= ~0x80;
   }
 
+  private cpx(value: number) {
+    const result = (this.X - value) & 0xff;
+
+    this.SR =
+      (this.SR & ~0x83) | // Clear C, Z, N
+      (this.X >= value ? 0x01 : 0) |
+      (result === 0 ? 0x02 : 0) |
+      (result & 0x80);
+  }
+
+  private cpy(value: number) {
+    const result = (this.Y - value) & 0xff;
+
+    this.SR =
+      (this.SR & ~0x83) |
+      (this.Y >= value ? 0x01 : 0) |
+      (result === 0 ? 0x02 : 0) |
+      (result & 0x80);
+  }
+
   reset() {
     this.A = 0;
     this.X = 0;
@@ -560,9 +580,47 @@ export class CPU {
       /**
        *    CPX - Compare Memory and Index X
        */
+      case 0xe0: {
+        // Immediate
+        this.cpx(this.read(this.PC++));
+        break;
+      }
+      case 0xe4: {
+        // Zero Page
+        const addr = this.read(this.PC++);
+        this.cpx(this.read(addr));
+        break;
+      }
+      case 0xec: {
+        // Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        this.cpx(this.read(addr));
+        break;
+      }
       /**
        *    CPY - Compare Memory and Index Y
        */
+      case 0xc0: {
+        // Immediate
+        this.cpy(this.read(this.PC++));
+        break;
+      }
+      case 0xc4: {
+        // Zero Page
+        const addr = this.read(this.PC++);
+        this.cpy(this.read(addr));
+        break;
+      }
+      case 0xcc: {
+        // Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        this.cpy(this.read(addr));
+        break;
+      }
       /**
        *    DEX - Decrement Index X by One
        */

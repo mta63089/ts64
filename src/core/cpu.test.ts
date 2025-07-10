@@ -739,6 +739,67 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x01).toBe(0x01);
     });
   });
+  describe("CPX Instructions", () => {
+    beforeEach(() => {
+      cpu.X = 0x30;
+    });
+
+    test("CPX immediate sets flags", () => {
+      cpu.memory[0x8000] = 0xe0;
+      cpu.memory[0x8001] = 0x30;
+      cpu.step();
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry
+    });
+
+    test("CPX zero page", () => {
+      cpu.memory[0x0042] = 0x20;
+      cpu.memory[0x8000] = 0xe4;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry
+    });
+
+    test("CPX absolute", () => {
+      cpu.memory[0x1234] = 0x40;
+      cpu.memory[0x8000] = 0xec;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative
+    });
+  });
+
+  describe("CPY Instructions", () => {
+    beforeEach(() => {
+      cpu.Y = 0x50;
+    });
+
+    test("CPY immediate sets flags", () => {
+      cpu.memory[0x8000] = 0xc0;
+      cpu.memory[0x8001] = 0x50;
+      cpu.step();
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry
+    });
+
+    test("CPY zero page", () => {
+      cpu.memory[0x0042] = 0x10;
+      cpu.memory[0x8000] = 0xc4;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry
+    });
+
+    test("CPY absolute", () => {
+      cpu.memory[0x1234] = 0x60;
+      cpu.memory[0x8000] = 0xcc;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative
+    });
+  });
 
   describe("LDA Tests", () => {
     test("0xa9 - LDA immediate loads value into A and sets flags", () => {
