@@ -201,6 +201,7 @@ describe("6502 CPU", () => {
       }
     });
   });
+
   describe("ADC Tests", () => {
     test("ADC immediate adds value to A without carry", () => {
       cpu.A = 0x10;
@@ -352,6 +353,7 @@ describe("6502 CPU", () => {
       expect(cpu.A).toBe(0x67);
     });
   });
+
   describe("ASL Tests", () => {
     test("ASL accumulator", () => {
       cpu.A = 0b01010101;
@@ -406,6 +408,7 @@ describe("6502 CPU", () => {
       expect(cpu.memory[0x1236]).toBe(0b10101010);
     });
   });
+
   describe("BCC Tests", () => {
     test("BCC branches when carry clear", () => {
       cpu.SR &= ~0x01; // Clear carry flag
@@ -434,6 +437,7 @@ describe("6502 CPU", () => {
       expect(cpu.PC).toBe(0x8002); // 0x8007 - 5 = 0x8002
     });
   });
+
   describe("BIT Tests", () => {
     test("BIT zero page sets Z, V, N flags correctly", () => {
       cpu.A = 0b1100;
@@ -527,6 +531,7 @@ describe("6502 CPU", () => {
       expect(cpu.PC).toBe(0x8002);
     });
   });
+
   describe("BRK Instruction", () => {
     test("BRK sets interrupt flag and jumps to IRQ vector", () => {
       cpu.memory[0xfffe] = 0x00;
@@ -579,26 +584,6 @@ describe("6502 CPU", () => {
     });
   });
 
-  describe("CLC Instruction", () => {
-    test("CLC clears carry flag", () => {
-      cpu.SR |= 0x01; // Set carry flag
-      cpu.memory[0x8000] = 0x18; // CLC
-      cpu.PC = 0x8000;
-      cpu.step();
-      expect(cpu.SR & 0x01).toBe(0);
-    });
-  });
-
-  describe("CLD Instruction", () => {
-    test("CLD clears decimal flag", () => {
-      cpu.SR |= 0x08; // Set decimal flag
-      cpu.memory[0x8000] = 0xd8; // CLD
-      cpu.PC = 0x8000;
-      cpu.step();
-      expect(cpu.SR & 0x08).toBe(0);
-    });
-  });
-
   describe("BCS Instruction", () => {
     test("BCS branches when carry set", () => {
       cpu.SR |= 0x01; // Carry flag set
@@ -618,6 +603,7 @@ describe("6502 CPU", () => {
       expect(cpu.PC).toBe(0x8002);
     });
   });
+
   describe("BEQ Instruction", () => {
     test("BEQ branches when zero set", () => {
       cpu.SR |= 0x02; // Zero flag set
@@ -635,6 +621,63 @@ describe("6502 CPU", () => {
       cpu.PC = 0x8000;
       cpu.step();
       expect(cpu.PC).toBe(0x8002);
+    });
+    test("BEQ branches forward when zero flag is set", () => {
+      cpu.SR |= 0x02; // Set Z flag
+      cpu.memory[0x8000] = 0xf0; // BEQ +2
+      cpu.memory[0x8001] = 0x02;
+      cpu.step();
+
+      expect(cpu.PC).toBe(0x8002 + 2); // +2 offset
+    });
+
+    test("BEQ does not branch when zero flag is clear", () => {
+      cpu.SR &= ~0x02; // Clear Z flag
+      cpu.memory[0x8000] = 0xf0;
+      cpu.memory[0x8001] = 0x02;
+      cpu.step();
+
+      expect(cpu.PC).toBe(0x8002); // No jump
+    });
+  });
+
+  describe("BNE Tests", () => {
+    test("BNE branches backward when zero flag is clear", () => {
+      cpu.SR &= ~0x02;
+      cpu.memory[0x8000] = 0xd0; // BNE -2
+      cpu.memory[0x8001] = 0xfe; // -2 as unsigned (0xFE = -2)
+      cpu.step();
+
+      expect(cpu.PC).toBe(0x8002 - 2);
+    });
+
+    test("BNE does not branch when zero flag is set", () => {
+      cpu.SR |= 0x02;
+      cpu.memory[0x8000] = 0xd0;
+      cpu.memory[0x8001] = 0x05;
+      cpu.step();
+
+      expect(cpu.PC).toBe(0x8002);
+    });
+  });
+
+  describe("CLC Instruction", () => {
+    test("CLC clears carry flag", () => {
+      cpu.SR |= 0x01; // Set carry flag
+      cpu.memory[0x8000] = 0x18; // CLC
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0);
+    });
+  });
+
+  describe("CLD Instruction", () => {
+    test("CLD clears decimal flag", () => {
+      cpu.SR |= 0x08; // Set decimal flag
+      cpu.memory[0x8000] = 0xd8; // CLD
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.SR & 0x08).toBe(0);
     });
   });
 
@@ -657,6 +700,7 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x40).toBe(0);
     });
   });
+
   describe("CMP Instructions", () => {
     beforeEach(() => {
       cpu.A = 0x50;
@@ -739,6 +783,7 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x01).toBe(0x01);
     });
   });
+
   describe("CPX Instructions", () => {
     beforeEach(() => {
       cpu.X = 0x30;
@@ -800,6 +845,7 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x80).toBe(0x80); // Negative
     });
   });
+
   describe("DEC/DEX/DEY Instructions", () => {
     test("DEC Zero Page", () => {
       cpu.memory[0x0042] = 0x05;
@@ -848,12 +894,120 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x02).toBe(0x02); // Zero set
     });
 
+    test("DEX decrements X and sets flags", () => {
+      cpu.X = 0x10;
+      cpu.memory[0x8000] = 0xca; // DEX
+      cpu.step();
+
+      expect(cpu.X).toBe(0x0f);
+      expect(cpu.SR & 0b10).toBe(0); // Z = 0
+    });
+
+    test("DEX sets zero flag when X reaches 0", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x8000] = 0xca;
+      cpu.step();
+
+      expect(cpu.X).toBe(0x00);
+      expect(cpu.SR & 0b10).toBe(0b10); // Z = 1
+    });
+
+    test("DEX sets negative flag when result >= 0x80", () => {
+      cpu.X = 0x80;
+      cpu.memory[0x8000] = 0xca;
+      cpu.step();
+
+      expect(cpu.X).toBe(0x7f);
+      expect(cpu.SR & 0b10000000).toBe(0); // N = 0
+    });
+
     test("DEY decrements Y and sets flags", () => {
       cpu.Y = 0x00;
       cpu.memory[0x8000] = 0x88;
       cpu.step();
       expect(cpu.Y).toBe(0xff);
       expect(cpu.SR & 0x80).toBe(0x80); // Negative set
+    });
+  });
+
+  describe("EOR Instructions", () => {
+    beforeEach(() => {
+      cpu.A = 0b11001100;
+    });
+
+    test("EOR immediate", () => {
+      cpu.memory[0x8000] = 0x49; // EOR #$AA
+      cpu.memory[0x8001] = 0b10101010;
+      cpu.step();
+      expect(cpu.A).toBe(0b01100110);
+    });
+
+    test("EOR zero page", () => {
+      cpu.memory[0x0042] = 0b11110000;
+      cpu.memory[0x8000] = 0x45;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.A).toBe(0b00111100);
+    });
+
+    test("EOR zero page,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x0043] = 0b11111111;
+      cpu.memory[0x8000] = 0x55;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.A).toBe(0b00110011);
+    });
+
+    test("EOR absolute", () => {
+      cpu.memory[0x1234] = 0b00001111;
+      cpu.memory[0x8000] = 0x4d;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.A).toBe(0b11000011);
+    });
+
+    test("EOR absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x1235] = 0x00;
+      cpu.memory[0x8000] = 0x5d;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.A).toBe(0b11001100); // XOR with 0
+    });
+
+    test("EOR absolute,Y", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x1235] = 0xff;
+      cpu.memory[0x8000] = 0x59;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.A).toBe(0b00110011); // XOR with 0xFF
+    });
+
+    test("EOR (indirect,X)", () => {
+      cpu.X = 0x04;
+      cpu.memory[0x0044] = 0x78;
+      cpu.memory[0x0045] = 0x56;
+      cpu.memory[0x5678] = 0b00000001;
+      cpu.memory[0x8000] = 0x41;
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.A).toBe(0b11001101);
+    });
+
+    test("EOR (indirect),Y", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x0040] = 0x00;
+      cpu.memory[0x0041] = 0x20;
+      cpu.memory[0x2001] = 0b00000010;
+      cpu.memory[0x8000] = 0x51;
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.A).toBe(0b11001110);
     });
   });
 
@@ -940,72 +1094,6 @@ describe("6502 CPU", () => {
 
       expect(cpu.memory[0x1234]).toBe(0x99);
       expect(cpu.PC).toBe(0x8003);
-    });
-  });
-
-  describe("DEX Tests", () => {
-    test("DEX decrements X and sets flags", () => {
-      cpu.X = 0x10;
-      cpu.memory[0x8000] = 0xca; // DEX
-      cpu.step();
-
-      expect(cpu.X).toBe(0x0f);
-      expect(cpu.SR & 0b10).toBe(0); // Z = 0
-    });
-
-    test("DEX sets zero flag when X reaches 0", () => {
-      cpu.X = 0x01;
-      cpu.memory[0x8000] = 0xca;
-      cpu.step();
-
-      expect(cpu.X).toBe(0x00);
-      expect(cpu.SR & 0b10).toBe(0b10); // Z = 1
-    });
-
-    test("DEX sets negative flag when result >= 0x80", () => {
-      cpu.X = 0x80;
-      cpu.memory[0x8000] = 0xca;
-      cpu.step();
-
-      expect(cpu.X).toBe(0x7f);
-      expect(cpu.SR & 0b10000000).toBe(0); // N = 0
-    });
-  });
-  describe("Branching Tests", () => {
-    test("BEQ branches forward when zero flag is set", () => {
-      cpu.SR |= 0x02; // Set Z flag
-      cpu.memory[0x8000] = 0xf0; // BEQ +2
-      cpu.memory[0x8001] = 0x02;
-      cpu.step();
-
-      expect(cpu.PC).toBe(0x8002 + 2); // +2 offset
-    });
-
-    test("BEQ does not branch when zero flag is clear", () => {
-      cpu.SR &= ~0x02; // Clear Z flag
-      cpu.memory[0x8000] = 0xf0;
-      cpu.memory[0x8001] = 0x02;
-      cpu.step();
-
-      expect(cpu.PC).toBe(0x8002); // No jump
-    });
-
-    test("BNE branches backward when zero flag is clear", () => {
-      cpu.SR &= ~0x02;
-      cpu.memory[0x8000] = 0xd0; // BNE -2
-      cpu.memory[0x8001] = 0xfe; // -2 as unsigned (0xFE = -2)
-      cpu.step();
-
-      expect(cpu.PC).toBe(0x8002 - 2);
-    });
-
-    test("BNE does not branch when zero flag is set", () => {
-      cpu.SR |= 0x02;
-      cpu.memory[0x8000] = 0xd0;
-      cpu.memory[0x8001] = 0x05;
-      cpu.step();
-
-      expect(cpu.PC).toBe(0x8002);
     });
   });
 

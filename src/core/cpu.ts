@@ -56,6 +56,7 @@ export class CPU {
     this.setZeroAndNegativeFlags(result);
     return result;
   }
+
   private cmp(value: number) {
     const result = (this.A - value) & 0xff;
 
@@ -90,6 +91,11 @@ export class CPU {
       (this.Y >= value ? 0x01 : 0) |
       (result === 0 ? 0x02 : 0) |
       (result & 0x80);
+  }
+
+  private eor(value: number) {
+    this.A = this.A ^ value;
+    this.setZeroAndNegativeFlags(this.A);
   }
 
   reset() {
@@ -663,6 +669,7 @@ export class CPU {
         this.setZeroAndNegativeFlags(value);
         break;
       }
+
       /**
        *    DEX - Decrement Index X by One
        */
@@ -672,6 +679,7 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.X);
         break;
       }
+
       /**
        *    DEY - Decrement Index Y by One
        */
@@ -680,9 +688,79 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.Y);
         break;
       }
+
       /**
        *    EOR - Exclusive-OR Memory with Accumulator
        */
+
+      // EOR Immediate
+      case 0x49: {
+        const value = this.read(this.PC++);
+        this.eor(value);
+        break;
+      }
+
+      // EOR Zero Page
+      case 0x45: {
+        const addr = this.read(this.PC++);
+        this.eor(this.read(addr));
+        break;
+      }
+
+      // EOR Zero Page,X
+      case 0x55: {
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        this.eor(this.read(addr));
+        break;
+      }
+
+      // EOR Absolute
+      case 0x4d: {
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        this.eor(this.read(addr));
+        break;
+      }
+
+      // EOR Absolute,X
+      case 0x5d: {
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        this.eor(this.read(addr & 0xffff));
+        break;
+      }
+
+      // EOR Absolute,Y
+      case 0x59: {
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.eor(this.read(addr & 0xffff));
+        break;
+      }
+
+      // EOR (Indirect,X)
+      case 0x41: {
+        const zpAddr = (this.read(this.PC++) + this.X) & 0xff;
+        const lo = this.read(zpAddr);
+        const hi = this.read((zpAddr + 1) & 0xff);
+        const addr = (hi << 8) | lo;
+        this.eor(this.read(addr));
+        break;
+      }
+
+      // EOR (Indirect),Y
+      case 0x51: {
+        const zpAddr = this.read(this.PC++);
+        const lo = this.read(zpAddr);
+        const hi = this.read((zpAddr + 1) & 0xff);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.eor(this.read(addr & 0xffff));
+        break;
+      }
+
       /**
        *    LDA - Load Accumulator with Memory
        */
