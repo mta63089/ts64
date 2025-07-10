@@ -800,6 +800,62 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x80).toBe(0x80); // Negative
     });
   });
+  describe("DEC/DEX/DEY Instructions", () => {
+    test("DEC Zero Page", () => {
+      cpu.memory[0x0042] = 0x05;
+      cpu.memory[0x8000] = 0xc6;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.memory[0x0042]).toBe(0x04);
+      expect(cpu.SR & 0x02).toBe(0); // Zero clear
+    });
+
+    test("DEC Zero Page,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x0043] = 0x01;
+      cpu.memory[0x8000] = 0xd6;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.memory[0x0043]).toBe(0x00);
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero set
+    });
+
+    test("DEC Absolute", () => {
+      cpu.memory[0x1234] = 0x00;
+      cpu.memory[0x8000] = 0xce;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.memory[0x1234]).toBe(0xff);
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative set
+    });
+
+    test("DEC Absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x1235] = 0x03;
+      cpu.memory[0x8000] = 0xde;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.memory[0x1235]).toBe(0x02);
+    });
+
+    test("DEX decrements X and sets flags", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x8000] = 0xca;
+      cpu.step();
+      expect(cpu.X).toBe(0x00);
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero set
+    });
+
+    test("DEY decrements Y and sets flags", () => {
+      cpu.Y = 0x00;
+      cpu.memory[0x8000] = 0x88;
+      cpu.step();
+      expect(cpu.Y).toBe(0xff);
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative set
+    });
+  });
 
   describe("LDA Tests", () => {
     test("0xa9 - LDA immediate loads value into A and sets flags", () => {

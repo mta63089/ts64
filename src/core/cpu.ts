@@ -622,6 +622,48 @@ export class CPU {
         break;
       }
       /**
+       *    DEC - Decrement Memory by One
+       */
+      case 0xc6: {
+        // DEC Zero Page
+        const addr = this.read(this.PC++);
+        const value = (this.read(addr) - 1) & 0xff;
+        this.write(addr, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+
+      case 0xd6: {
+        // DEC Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        const value = (this.read(addr) - 1) & 0xff;
+        this.write(addr, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+
+      case 0xce: {
+        // DEC Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        const value = (this.read(addr) - 1) & 0xff;
+        this.write(addr, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+
+      case 0xde: {
+        // DEC Absolute,X
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        const value = (this.read(addr & 0xffff) - 1) & 0xff;
+        this.write(addr & 0xffff, value);
+        this.setZeroAndNegativeFlags(value);
+        break;
+      }
+      /**
        *    DEX - Decrement Index X by One
        */
       case 0xca: {
@@ -630,6 +672,17 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.X);
         break;
       }
+      /**
+       *    DEY - Decrement Index Y by One
+       */
+      case 0x88: {
+        this.Y = (this.Y - 1) & 0xff;
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      /**
+       *    EOR - Exclusive-OR Memory with Accumulator
+       */
       /**
        *    LDA - Load Accumulator with Memory
        */
