@@ -98,6 +98,16 @@ export class CPU {
     this.setZeroAndNegativeFlags(this.A);
   }
 
+  private push(value: number) {
+    this.write(0x0100 + this.SP, value);
+    this.SP = (this.SP - 1) & 0xff;
+  }
+
+  private pull(): number {
+    this.SP = (this.SP + 1) & 0xff;
+    return this.read(0x0100 + this.SP);
+  }
+
   reset() {
     this.A = 0;
     this.X = 0;
@@ -819,6 +829,40 @@ export class CPU {
         break;
       }
       /**
+       *    JMP - Jump to New Location
+       */
+      case 0x4c: {
+        // JMP Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        this.PC = (hi << 8) | lo;
+        break;
+      }
+      // JMP Indirect (bug-compatible with 6502 page wrap)
+      case 0x6c: {
+        const ptrLo = this.read(this.PC++);
+        const ptrHi = this.read(this.PC++);
+        const ptr = (ptrHi << 8) | ptrLo;
+
+        const lo = this.read(ptr);
+        const hi = this.read((ptr & 0xff00) | ((ptr + 1) & 0x00ff)); // Bug emulation
+        this.PC = (hi << 8) | lo;
+        break;
+      }
+      /**
+       *    JSR - Jump to New Location Saving Return Address
+       */
+      case 0x20: {
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        const returnAddr = this.PC - 1;
+        this.push((returnAddr >> 8) & 0xff); // High byte
+        this.push(returnAddr & 0xff); // Low byte
+        this.PC = addr;
+        break;
+      }
+      /**
        *    LDA - Load Accumulator with Memory
        */
       case 0xa9: {
@@ -872,13 +916,12 @@ export class CPU {
         break;
       }
       /**
-       *    JMP - Jump to New Location
+       *    RTS - Return from Subroutine
        */
-      case 0x4c: {
-        // JMP Absolute
-        const lo = this.read(this.PC++);
-        const hi = this.read(this.PC++);
-        this.PC = (hi << 8) | lo;
+      case 0x60: {
+        const lo = this.pull();
+        const hi = this.pull();
+        this.PC = (((hi << 8) | lo) + 1) & 0xffff;
         break;
       }
       /**

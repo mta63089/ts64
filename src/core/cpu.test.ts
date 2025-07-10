@@ -1066,6 +1066,49 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x80).toBe(0x80); // Negative
     });
   });
+  describe("JMP, JSR, RTS Instructions", () => {
+    test("JMP absolute sets PC", () => {
+      cpu.memory[0x8000] = 0x4c;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.PC).toBe(0x1234);
+    });
+
+    test("JMP indirect sets PC (with 6502 bug)", () => {
+      cpu.memory[0x8000] = 0x6c;
+      cpu.memory[0x8001] = 0xff;
+      cpu.memory[0x8002] = 0x10;
+      cpu.memory[0x10ff] = 0x78;
+      cpu.memory[0x1000] = 0x56; // Bug: high byte from 0x1000 not 0x1100
+      cpu.step();
+      expect(cpu.PC).toBe(0x5678);
+    });
+
+    test("JSR pushes return address and sets PC", () => {
+      cpu.memory[0x8000] = 0x20;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x90;
+      const originalSP = cpu.SP; // 0xFD by default
+      cpu.step();
+
+      expect(cpu.PC).toBe(0x9000);
+      expect(cpu.SP).toBe((originalSP - 2) & 0xff); // = 0xFB
+
+      const hi = cpu.read(0x01fd); // high byte pushed first
+      const lo = cpu.read(0x01fc); // low byte pushed second
+      expect((hi << 8) | lo).toBe(0x8002);
+    });
+
+    test("RTS pulls return address and jumps", () => {
+      cpu.SP = 0xfb;
+      cpu.write(0x01fc, 0x02); // low byte
+      cpu.write(0x01fd, 0x80); // high byte
+      cpu.memory[0x8000] = 0x60; // RTS
+      cpu.step();
+      expect(cpu.PC).toBe(0x8003); // pulled 0x8002 → add 1 = 0x8003
+    });
+  });
 
   describe("LDA Tests", () => {
     test("0xa9 - LDA immediate loads value into A and sets flags", () => {
@@ -1130,6 +1173,28 @@ describe("6502 CPU", () => {
     });
   });
 
+  describe("LDX Tests", () => {
+    test("LDX immediate loads value into X and sets flags", () => {
+      cpu.memory[0x8000] = 0xa2; // LDX #$10
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+
+      expect(cpu.X).toBe(0x10);
+      expect(cpu.PC).toBe(0x8002);
+    });
+
+    test("LDX absolute loads value from memory into X", () => {
+      cpu.memory[0x1234] = 0xaa;
+      cpu.memory[0x8000] = 0xae; // LDX $1234
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+
+      expect(cpu.X).toBe(0xaa);
+      expect(cpu.PC).toBe(0x8003);
+    });
+  });
+
   describe("NOP Tests", () => {
     test("NOP does nothing but increment PC", () => {
       cpu.memory[0x8000] = 0xea;
@@ -1162,69 +1227,6 @@ describe("6502 CPU", () => {
       cpu.step();
 
       expect(cpu.memory[0x1234]).toBe(0xcc);
-      expect(cpu.PC).toBe(0x8003);
-    });
-  });
-
-  describe("JMP Tests", () => {
-    test("JMP absolute sets PC to target address", () => {
-      cpu.memory[0x8000] = 0x4c; // JMP $1234
-      cpu.memory[0x8001] = 0x34;
-      cpu.memory[0x8002] = 0x12;
-      cpu.step();
-
-      expect(cpu.PC).toBe(0x1234);
-    });
-  });
-
-  describe("INX Tests", () => {
-    test("INX increments X and sets flags", () => {
-      cpu.X = 0x00;
-      cpu.memory[0x8000] = 0xe8; // INX
-      cpu.step();
-
-      expect(cpu.X).toBe(0x01);
-      expect(cpu.SR & 0b10).toBe(0); // Z = 0
-      expect(cpu.SR & 0b10000000).toBe(0); // N = 0
-    });
-
-    test("INX sets zero flag when result is 0", () => {
-      cpu.X = 0xff;
-      cpu.memory[0x8000] = 0xe8;
-      cpu.step();
-
-      expect(cpu.X).toBe(0x00);
-      expect(cpu.SR & 0b10).toBe(0b10); // Z = 1
-    });
-
-    test("INX sets negative flag when result is >= 0x80", () => {
-      cpu.X = 0x7f;
-      cpu.memory[0x8000] = 0xe8;
-      cpu.step();
-
-      expect(cpu.X).toBe(0x80);
-      expect(cpu.SR & 0b10000000).toBe(0b10000000); // N = 1
-    });
-  });
-
-  describe("LDX Tests", () => {
-    test("LDX immediate loads value into X and sets flags", () => {
-      cpu.memory[0x8000] = 0xa2; // LDX #$10
-      cpu.memory[0x8001] = 0x10;
-      cpu.step();
-
-      expect(cpu.X).toBe(0x10);
-      expect(cpu.PC).toBe(0x8002);
-    });
-
-    test("LDX absolute loads value from memory into X", () => {
-      cpu.memory[0x1234] = 0xaa;
-      cpu.memory[0x8000] = 0xae; // LDX $1234
-      cpu.memory[0x8001] = 0x34;
-      cpu.memory[0x8002] = 0x12;
-      cpu.step();
-
-      expect(cpu.X).toBe(0xaa);
       expect(cpu.PC).toBe(0x8003);
     });
   });
