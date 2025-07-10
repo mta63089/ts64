@@ -638,6 +638,26 @@ describe("6502 CPU", () => {
     });
   });
 
+  describe("CLI Instruction", () => {
+    test("CLI clears Interrupt Disable flag", () => {
+      cpu.SR |= 0x04; // Set Interrupt Disable flag
+      cpu.memory[0x8000] = 0x58; // CLI
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.SR & 0x04).toBe(0);
+    });
+  });
+
+  describe("CLV Instruction", () => {
+    test("CLV clears Overflow flag", () => {
+      cpu.SR |= 0x40; // Set Overflow flag
+      cpu.memory[0x8000] = 0xb8; // CLV
+      cpu.PC = 0x8000;
+      cpu.step();
+      expect(cpu.SR & 0x40).toBe(0);
+    });
+  });
+
   describe("LDA Tests", () => {
     test("0xa9 - LDA immediate loads value into A and sets flags", () => {
       cpu.memory[0x8000] = 0xa9; // LDA #$42

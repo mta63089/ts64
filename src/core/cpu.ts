@@ -37,12 +37,12 @@ export class CPU {
     this.setZeroAndNegativeFlags(this.A);
   }
 
-  and(value: number) {
+  private and(value: number) {
     this.A = this.A & value;
     this.setZeroAndNegativeFlags(this.A);
   }
 
-  asl(value: number) {
+  private asl(value: number) {
     const carry = value & 0x80 ? 1 : 0; // bit 7 into carry
     const result = (value << 1) & 0xff; // shift left, keep 8 bits
 
@@ -55,6 +55,21 @@ export class CPU {
 
     this.setZeroAndNegativeFlags(result);
     return result;
+  }
+  private cmp(value: number) {
+    const result = (this.A - value) & 0xff;
+
+    // Set or clear Carry flag (bit 0)
+    if (this.A >= value) this.SR |= 0x01;
+    else this.SR &= ~0x01;
+
+    // Set or clear Zero flag (bit 1)
+    if (result === 0) this.SR |= 0x02;
+    else this.SR &= ~0x02;
+
+    // Set or clear Negative flag (bit 7)
+    if (result & 0x80) this.SR |= 0x80;
+    else this.SR &= ~0x80;
   }
 
   reset() {
@@ -93,14 +108,16 @@ export class CPU {
     switch (opcode) {
       case 0xea: // NOP
         break;
+      /**
+       *            ADC - Add Memory to Accumulator with Carry
+       */
+
+      // Immediate
       case 0x69: {
         const M = this.read(this.PC++);
         this.adc(M);
         break;
       }
-      /**
-       *            ADC
-       */
 
       // Zero Page       - ADC $nn
       case 0x65: {
@@ -172,7 +189,7 @@ export class CPU {
       }
 
       /**
-       *  AND
+       *  AND - AND Memory with Accumulator
        */
       // Immediate
       case 0x29: {
@@ -300,7 +317,112 @@ export class CPU {
         break;
       }
       /**
-       *    BRK
+       *    BCC - Branch on Carry Clear
+       */
+      case 0x90: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x01) === 0) {
+          // Carry flag clear
+          // Offset is signed 8-bit
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff; // Wrap 16-bit
+        }
+        break;
+      }
+      /**
+       *    BCS - Branch on Carry Set
+       */
+      case 0xb0: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x01) !== 0) {
+          // Carry flag set
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    BEQ - Branch on Result Zero
+       */
+      case 0xf0: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x02) !== 0) {
+          // Zero flag set
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    BIT - Test Bits in Memory with Accumulator
+       */
+      case 0x24: {
+        // BIT Zero Page
+        const addr = this.read(this.PC++);
+        const value = this.read(addr);
+        const result = this.A & value;
+        console.log("Before:", this.SR.toString(2));
+        this.SR =
+          (this.SR & ~(0x02 | 0x40 | 0x80)) |
+          (result === 0 ? 0x02 : 0) |
+          (value & 0x40) |
+          (value & 0x80);
+        console.log("After:", this.SR.toString(2));
+        break;
+      }
+
+      case 0x2c: {
+        // BIT Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        const value = this.read(addr);
+        const result = this.A & value;
+        this.SR =
+          (this.SR & ~(0x02 | 0x40 | 0x80)) |
+          (result === 0 ? 0x02 : 0) |
+          (value & 0x40) |
+          (value & 0x80);
+        break;
+      }
+      /**
+       *    BMI - Branch on Result Minus
+       */
+      case 0x30: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x80) !== 0) {
+          // Negative flag set
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    BNE - Branch on Result not Zero
+       */
+      case 0xd0: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x02) === 0) {
+          // Zero flag clear
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    BPL - Branch on Result Plus
+       */
+      case 0x10: {
+        const offset = this.read(this.PC++);
+        if ((this.SR & 0x80) === 0) {
+          // Negative flag clear
+          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
+          this.PC = (this.PC + signedOffset) & 0xffff;
+        }
+        break;
+      }
+      /**
+       *    BRK - Force Break
        */
       case 0x00: {
         // BRK
@@ -309,11 +431,12 @@ export class CPU {
         this.PC = this.readWord(0xfffe); // Jump to IRQ vector
         break;
       }
+      /**
+       *    BVC - Branch on Overflow Clear
+       */
       case 0x50: {
-        // BVC (branch if overflow clear)
         const offset = this.read(this.PC++);
         if ((this.SR & 0x40) === 0) {
-          // Overflow flag clear
           const signedOffset = offset < 0x80 ? offset : offset - 0x100;
           this.PC = (this.PC + signedOffset) & 0xffff;
         }
@@ -348,120 +471,41 @@ export class CPU {
         break;
       }
       /**
-       *    BCC
+       *    CLI - Clear Interrupt Disable bit
        */
-      case 0x90: {
-        // BCC
-        const offset = this.read(this.PC++);
-        if ((this.SR & 0x01) === 0) {
-          // Carry flag clear
-          // Offset is signed 8-bit
-          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
-          this.PC = (this.PC + signedOffset) & 0xffff; // Wrap 16-bit
-        }
+      case 0x58: {
+        this.SR &= ~0x04;
+        this.PC++;
         break;
       }
       /**
-       *    BCS
+       *    CLV - Clear Overflow Flag
        */
-      // BCS - Branch if Carry Set
-      case 0xb0: {
-        const offset = this.read(this.PC++);
-        if ((this.SR & 0x01) !== 0) {
-          // Carry flag set
-          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
-          this.PC = (this.PC + signedOffset) & 0xffff;
-        }
+      case 0xb8: {
+        this.SR &= ~0x40;
+        this.PC++;
         break;
       }
       /**
-       *    BIT
+       *    CMP - Compare Memory with Accumulator
        */
-      case 0x24: {
-        // BIT Zero Page
-        const addr = this.read(this.PC++);
-        const value = this.read(addr);
-        const result = this.A & value;
-        console.log("Before:", this.SR.toString(2));
-        this.SR =
-          (this.SR & ~(0x02 | 0x40 | 0x80)) |
-          (result === 0 ? 0x02 : 0) |
-          (value & 0x40) |
-          (value & 0x80);
-        console.log("After:", this.SR.toString(2));
-        break;
-      }
-
-      case 0x2c: {
-        // BIT Absolute
-        const lo = this.read(this.PC++);
-        const hi = this.read(this.PC++);
-        const addr = (hi << 8) | lo;
-        const value = this.read(addr);
-        const result = this.A & value;
-        this.SR =
-          (this.SR & ~(0x02 | 0x40 | 0x80)) |
-          (result === 0 ? 0x02 : 0) |
-          (value & 0x40) |
-          (value & 0x80);
+      /**
+       *    CPX - Compare Memory and Index X
+       */
+      /**
+       *    CPY - Compare Memory and Index Y
+       */
+      /**
+       *    DEX - Decrement Index X by One
+       */
+      case 0xca: {
+        // implied
+        this.X = (this.X - 1) & 0xff;
+        this.setZeroAndNegativeFlags(this.X);
         break;
       }
       /**
-       *    BMI
-       */
-      case 0x30: {
-        // BMI
-        const offset = this.read(this.PC++);
-        if ((this.SR & 0x80) !== 0) {
-          // Negative flag set
-          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
-          this.PC = (this.PC + signedOffset) & 0xffff;
-        }
-        break;
-      }
-      /**
-       *    BNE
-       */
-      case 0xd0: {
-        // BNE
-        const offset = this.read(this.PC++);
-        if ((this.SR & 0x02) === 0) {
-          // Zero flag clear
-          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
-          this.PC = (this.PC + signedOffset) & 0xffff;
-        }
-        break;
-      }
-      /**
-       *    BPL
-       */
-      case 0x10: {
-        // BPL
-        const offset = this.read(this.PC++);
-        if ((this.SR & 0x80) === 0) {
-          // Negative flag clear
-          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
-          this.PC = (this.PC + signedOffset) & 0xffff;
-        }
-        break;
-      }
-      /**
-       *    BEQ
-       */
-
-      // Branch if Zero Set
-      case 0xf0: {
-        const offset = this.read(this.PC++);
-        if ((this.SR & 0x02) !== 0) {
-          // Zero flag set
-          const signedOffset = offset < 0x80 ? offset : offset - 0x100;
-          this.PC = (this.PC + signedOffset) & 0xffff;
-        }
-        break;
-      }
-
-      /**
-       *    LDA
+       *    LDA - Load Accumulator with Memory
        */
       case 0xa9: {
         // LDA Immediate
@@ -494,27 +538,19 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.A);
         break;
       }
-      case 0x8d: {
-        // STA Absolute
-        // This reads the next 2 bytes as an address (low byte first), and writes
-        // the contents of the accumulator (A) to that memory location.
-        const lo = this.read(this.PC++);
-        const hi = this.read(this.PC++);
-        const addr = (hi << 8) | lo;
-        this.write(addr, this.A);
-        break;
-      }
+      /**
+       *    INX - Increment Index X by one
+       */
       case 0xe8: {
-        // INX
-        // Increments the X register
-        // Masks it to 8 bits
-        // Updates Zero and Negative flags
         this.X = (this.X + 1) & 0xff;
         this.setZeroAndNegativeFlags(this.X);
         break;
       }
+      /**
+       *    LDX - Load Index X with Memory
+       */
       case 0xa2: {
-        // LDX Immediate
+        // Immediate
         const value = this.read(this.PC++);
         this.X = value;
         this.setZeroAndNegativeFlags(this.X);
@@ -529,6 +565,9 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.X);
         break;
       }
+      /**
+       *    JMP - Jump to New Location
+       */
       case 0x4c: {
         // JMP Absolute
         const lo = this.read(this.PC++);
@@ -536,34 +575,28 @@ export class CPU {
         this.PC = (hi << 8) | lo;
         break;
       }
+      /**
+       *    STA - Store Accumulator in Memory
+       */
+      case 0x8d: {
+        // STA Absolute
+        // This reads the next 2 bytes as an address (low byte first), and writes
+        // the contents of the accumulator (A) to that memory location.
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        this.write(addr, this.A);
+        break;
+      }
+      /**
+       *    STX - Store Index X in Memory
+       */
       case 0x8e: {
         // STX Absolute
         const lo = this.read(this.PC++);
         const hi = this.read(this.PC++);
         const addr = (hi << 8) | lo;
         this.write(addr, this.X);
-        break;
-      }
-      case 0xca: {
-        // DEX
-        this.X = (this.X - 1) & 0xff;
-        this.setZeroAndNegativeFlags(this.X);
-        break;
-      }
-      case 0xf0: {
-        // BEQ (Branch if Zero flag is set)
-        const offset = this.read(this.PC++);
-        if (this.SR & 0x02) {
-          this.PC += offset < 0x80 ? offset : offset - 0x100; // signed 8-bit
-        }
-        break;
-      }
-      case 0xd0: {
-        // BNE (Branch if Zero flag is clear)
-        const offset = this.read(this.PC++);
-        if (!(this.SR & 0x02)) {
-          this.PC += offset < 0x80 ? offset : offset - 0x100; // signed 8-bit
-        }
         break;
       }
       default:
