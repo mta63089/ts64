@@ -1696,16 +1696,77 @@ describe("6502 CPU", () => {
     });
   });
 
-  describe("STX Tests", () => {
-    test("STX absolute stores X into memory", () => {
-      cpu.X = 0xcc;
-      cpu.memory[0x8000] = 0x8e; // STX $1234
-      cpu.memory[0x8001] = 0x34;
-      cpu.memory[0x8002] = 0x12;
+  describe("STX/STY/TAX/TAY Instructions", () => {
+    // STX
+    test("STX Zero Page", () => {
+      cpu.X = 0x55;
+      cpu.memory[0x8000] = 0x86;
+      cpu.memory[0x8001] = 0x10;
       cpu.step();
+      expect(cpu.memory[0x0010]).toBe(0x55);
+    });
 
-      expect(cpu.memory[0x1234]).toBe(0xcc);
-      expect(cpu.PC).toBe(0x8003);
+    test("STX Zero Page,Y", () => {
+      cpu.X = 0x55;
+      cpu.Y = 0x02;
+      cpu.memory[0x8000] = 0x96;
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+      expect(cpu.memory[0x0012]).toBe(0x55);
+    });
+
+    test("STX Absolute", () => {
+      cpu.X = 0x55;
+      cpu.memory[0x8000] = 0x8e;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9000]).toBe(0x55);
+    });
+
+    // STY
+    test("STY Zero Page", () => {
+      cpu.Y = 0x77;
+      cpu.memory[0x8000] = 0x84;
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+      expect(cpu.memory[0x0010]).toBe(0x77);
+    });
+
+    test("STY Zero Page,X", () => {
+      cpu.Y = 0x77;
+      cpu.X = 0x02;
+      cpu.memory[0x8000] = 0x94;
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+      expect(cpu.memory[0x0012]).toBe(0x77);
+    });
+
+    test("STY Absolute", () => {
+      cpu.Y = 0x77;
+      cpu.memory[0x8000] = 0x8c;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9000]).toBe(0x77);
+    });
+
+    // TAX
+    test("TAX copies A to X and sets flags", () => {
+      cpu.A = 0x00;
+      cpu.memory[0x8000] = 0xaa;
+      cpu.step();
+      expect(cpu.X).toBe(0x00);
+      expect(cpu.SR & 0x02).toBe(0x02); // Z = 1
+    });
+
+    // TAY
+    test("TAY copies A to Y and sets flags", () => {
+      cpu.A = 0x80;
+      cpu.memory[0x8000] = 0xa8;
+      cpu.step();
+      expect(cpu.Y).toBe(0x80);
+      expect(cpu.SR & 0x80).toBe(0x80); // N = 1
     });
   });
 });

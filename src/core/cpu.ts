@@ -1454,14 +1454,75 @@ export class CPU {
       /**
        *    STX - Store Index X in Memory
        */
-      case 0x8e: {
-        // STX Absolute
-        const lo = this.read(this.PC++);
-        const hi = this.read(this.PC++);
-        const addr = (hi << 8) | lo;
+      case 0x86: {
+        // Zero Page
+        const addr = this.read(this.PC++);
         this.write(addr, this.X);
         break;
       }
+      case 0x96: {
+        // Zero Page,Y
+        const addr = (this.read(this.PC++) + this.Y) & 0xff;
+        this.write(addr, this.X);
+        break;
+      }
+      case 0x8e: {
+        // Absolute
+        const addr = this.readWord(this.PC);
+        this.PC += 2;
+        this.write(addr, this.X);
+        break;
+      }
+      /**
+       *    STY - Sore Index Y in Memory
+       */
+      case 0x84: {
+        // Zero Page
+        const addr = this.read(this.PC++);
+        this.write(addr, this.Y);
+        break;
+      }
+      case 0x94: {
+        // Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        this.write(addr, this.Y);
+        break;
+      }
+      case 0x8c: {
+        // Absolute
+        const addr = this.readWord(this.PC);
+        this.PC += 2;
+        this.write(addr, this.Y);
+        break;
+      }
+      /**
+       *    TAX - Transfer Accumulator to Index X
+       */
+      case 0xaa: {
+        this.X = this.A;
+        this.setZeroAndNegativeFlags(this.X);
+        break;
+      }
+      /**
+       *    TAY - Transfer Accumulator to Index Y
+       */
+      case 0xa8: {
+        this.Y = this.A;
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      /**
+       *    TSX - Transfer Stack Pointer to Index X
+       */
+      /**
+       *    TXA - Transfer Index X to Accumulator
+       */
+      /**
+       *    TXS - Transfer Index X to Stack Register
+       */
+      /**
+       *    TYA - Transfer Index Y to Accumulator
+       */
       default:
         throw new Error(`Unimplemented opcode: ${opcode.toString(16)}`);
     }
