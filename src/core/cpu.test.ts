@@ -1626,16 +1626,73 @@ describe("6502 CPU", () => {
     });
   });
 
-  describe("STA Tests", () => {
-    test("STA absolute stores accumulator into memory", () => {
-      cpu.A = 0x99;
-      cpu.memory[0x8000] = 0x8d; // STA $1234
-      cpu.memory[0x8001] = 0x34;
-      cpu.memory[0x8002] = 0x12;
+  describe("STA Instructions", () => {
+    test("STA Zero Page", () => {
+      cpu.A = 0x42;
+      cpu.memory[0x8000] = 0x85;
+      cpu.memory[0x8001] = 0x10;
       cpu.step();
+      expect(cpu.memory[0x0010]).toBe(0x42);
+    });
 
-      expect(cpu.memory[0x1234]).toBe(0x99);
-      expect(cpu.PC).toBe(0x8003);
+    test("STA Zero Page,X", () => {
+      cpu.A = 0x42;
+      cpu.X = 0x01;
+      cpu.memory[0x8000] = 0x95;
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+      expect(cpu.memory[0x0011]).toBe(0x42);
+    });
+
+    test("STA Absolute", () => {
+      cpu.A = 0x42;
+      cpu.memory[0x8000] = 0x8d;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9000]).toBe(0x42);
+    });
+
+    test("STA Absolute,X", () => {
+      cpu.A = 0x42;
+      cpu.X = 0x10;
+      cpu.memory[0x8000] = 0x9d;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9010]).toBe(0x42);
+    });
+
+    test("STA Absolute,Y", () => {
+      cpu.A = 0x42;
+      cpu.Y = 0x10;
+      cpu.memory[0x8000] = 0x99;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9010]).toBe(0x42);
+    });
+
+    test("STA (Indirect,X)", () => {
+      cpu.A = 0x42;
+      cpu.X = 0x04;
+      cpu.memory[0x8000] = 0x81;
+      cpu.memory[0x8001] = 0x10;
+      cpu.memory[0x0014] = 0x00;
+      cpu.memory[0x0015] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9000]).toBe(0x42);
+    });
+
+    test("STA (Indirect),Y", () => {
+      cpu.A = 0x42;
+      cpu.Y = 0x04;
+      cpu.memory[0x8000] = 0x91;
+      cpu.memory[0x8001] = 0x10;
+      cpu.memory[0x0010] = 0x00;
+      cpu.memory[0x0011] = 0x90;
+      cpu.step();
+      expect(cpu.memory[0x9004]).toBe(0x42);
     });
   });
 
