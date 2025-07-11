@@ -1576,6 +1576,19 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x01).toBe(0x00);
     });
   });
+
+  test("RTI pulls status and PC from stack", () => {
+    cpu.SP = 0xfa;
+    cpu.write(0x01fb, 0b10101010); // SR to pull
+    cpu.write(0x01fc, 0x34); // PC low byte
+    cpu.write(0x01fd, 0x12); // PC high byte
+    cpu.memory[0x8000] = 0x40; // RTI
+    cpu.step();
+
+    expect(cpu.SR & 0xcf).toBe(0b10101010 & 0xcf); // Ignore B flag and unused bit
+    expect(cpu.PC).toBe(0x1234);
+  });
+
   describe("SBC, SEC, SED, SEI Instructions", () => {
     beforeEach(() => {
       cpu.reset();
@@ -1766,6 +1779,41 @@ describe("6502 CPU", () => {
       cpu.memory[0x8000] = 0xa8;
       cpu.step();
       expect(cpu.Y).toBe(0x80);
+      expect(cpu.SR & 0x80).toBe(0x80); // N = 1
+    });
+  });
+
+  describe("TSX, TXA, TXS, TYA Instructions", () => {
+    test("TSX copies SP to X and sets flags", () => {
+      cpu.SP = 0x80;
+      cpu.memory[0x8000] = 0xba;
+      cpu.step();
+      expect(cpu.X).toBe(0x80);
+      expect(cpu.SR & 0x80).toBe(0x80); // N = 1
+    });
+
+    test("TXA copies X to A and sets flags", () => {
+      cpu.X = 0x00;
+      cpu.memory[0x8000] = 0x8a;
+      cpu.step();
+      expect(cpu.A).toBe(0x00);
+      expect(cpu.SR & 0x02).toBe(0x02); // Z = 1
+    });
+
+    test("TXS copies X to SP (no flags affected)", () => {
+      cpu.X = 0x42;
+      cpu.memory[0x8000] = 0x9a;
+      const originalSR = cpu.SR;
+      cpu.step();
+      expect(cpu.SP).toBe(0x42);
+      expect(cpu.SR).toBe(originalSR); // No flag change
+    });
+
+    test("TYA copies Y to A and sets flags", () => {
+      cpu.Y = 0xff;
+      cpu.memory[0x8000] = 0x98;
+      cpu.step();
+      expect(cpu.A).toBe(0xff);
       expect(cpu.SR & 0x80).toBe(0x80); // N = 1
     });
   });

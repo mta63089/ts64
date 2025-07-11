@@ -1304,6 +1304,14 @@ export class CPU {
       /**
        *    RTI - Return from Interrupt
        */
+      case 0x40: {
+        // RTI
+        this.SR = (this.pull() & 0xef) | 0x20; // Mask off break flag, ensure unused bit is set
+        const lo = this.pull();
+        const hi = this.pull();
+        this.PC = (hi << 8) | lo;
+        break;
+      }
       /**
        *    RTS - Return from Subroutine
        */
@@ -1514,15 +1522,34 @@ export class CPU {
       /**
        *    TSX - Transfer Stack Pointer to Index X
        */
+      case 0xba: {
+        this.X = this.SP;
+        this.setZeroAndNegativeFlags(this.X);
+        break;
+      }
       /**
        *    TXA - Transfer Index X to Accumulator
        */
+      case 0x8a: {
+        this.A = this.X;
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
       /**
        *    TXS - Transfer Index X to Stack Register
        */
+      case 0x9a: {
+        this.SP = this.X;
+        break;
+      }
       /**
        *    TYA - Transfer Index Y to Accumulator
        */
+      case 0x98: {
+        this.A = this.Y;
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
       default:
         throw new Error(`Unimplemented opcode: ${opcode.toString(16)}`);
     }
