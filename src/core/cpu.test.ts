@@ -1066,6 +1066,7 @@ describe("6502 CPU", () => {
       expect(cpu.SR & 0x80).toBe(0x80); // Negative
     });
   });
+
   describe("JMP, JSR, RTS Instructions", () => {
     test("JMP absolute sets PC", () => {
       cpu.memory[0x8000] = 0x4c;
@@ -1330,6 +1331,58 @@ describe("6502 CPU", () => {
       cpu.memory[0x8002] = 0x20;
       cpu.step();
       expect(cpu.Y).toBe(0x77);
+    });
+  });
+
+  describe("LSR Instructions", () => {
+    test("LSR Accumulator", () => {
+      cpu.A = 0b00000011;
+      cpu.memory[0x8000] = 0x4a;
+      cpu.step();
+      expect(cpu.A).toBe(0b00000001);
+      expect(cpu.SR & 0x01).toBe(1); // Carry was set
+    });
+
+    test("LSR Zero Page", () => {
+      cpu.memory[0x0042] = 0b00000010;
+      cpu.memory[0x8000] = 0x46;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.memory[0x0042]).toBe(0b00000001);
+      expect(cpu.SR & 0x01).toBe(0); // No carry
+    });
+
+    test("LSR Zero Page,X", () => {
+      cpu.X = 1;
+      cpu.memory[0x0043] = 0b00000001;
+      cpu.memory[0x8000] = 0x56;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.memory[0x0043]).toBe(0b00000000);
+      expect(cpu.SR & 0x01).toBe(1); // Carry
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero flag
+    });
+
+    test("LSR Absolute", () => {
+      cpu.memory[0x1234] = 0b11111110;
+      cpu.memory[0x8000] = 0x4e;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.memory[0x1234]).toBe(0b01111111);
+      expect(cpu.SR & 0x01).toBe(0); // No carry
+    });
+
+    test("LSR Absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x2001] = 0b00000001;
+      cpu.memory[0x8000] = 0x5e;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x20;
+      cpu.step();
+      expect(cpu.memory[0x2001]).toBe(0x00);
+      expect(cpu.SR & 0x01).toBe(1); // Carry
+      expect(cpu.SR & 0x02).toBe(0x02); // Zero
     });
   });
 

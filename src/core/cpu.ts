@@ -121,6 +121,12 @@ export class CPU {
     return this.memory[addr];
   }
 
+  private setFlag(flag: "C" | "Z" | "N", value: number) {
+    const mask = { C: 0x01, Z: 0x02, N: 0x80 }[flag];
+    if (value) this.SR |= mask;
+    else this.SR &= ~mask;
+  }
+
   write(addr: number, value: number) {
     this.memory[addr] = value;
   }
@@ -1017,6 +1023,65 @@ export class CPU {
         const addr = ((hi << 8) | lo) + this.X;
         this.Y = this.read(addr & 0xffff);
         this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      /**
+       *    LSR - Logical Shift Right
+       */
+      case 0x4a: {
+        // LSR Accumulator
+        const carry = this.A & 0x01;
+        this.setFlag("C", carry);
+        this.A = this.A >> 1;
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x46: {
+        // LSR Zero Page
+        const addr = this.read(this.PC++);
+        const value = this.read(addr);
+        const carry = value & 0x01;
+        const result = value >> 1;
+        this.setFlag("C", carry);
+        this.write(addr, result);
+        this.setZeroAndNegativeFlags(result);
+        break;
+      }
+      case 0x56: {
+        // LSR Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        const value = this.read(addr);
+        const carry = value & 0x01;
+        const result = value >> 1;
+        this.setFlag("C", carry);
+        this.write(addr, result);
+        this.setZeroAndNegativeFlags(result);
+        break;
+      }
+      case 0x4e: {
+        // LSR Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        const value = this.read(addr);
+        const carry = value & 0x01;
+        const result = value >> 1;
+        this.setFlag("C", carry);
+        this.write(addr, result);
+        this.setZeroAndNegativeFlags(result);
+        break;
+      }
+      case 0x5e: {
+        // LSR Absolute,X
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        const value = this.read(addr & 0xffff);
+        const carry = value & 0x01;
+        const result = value >> 1;
+        this.setFlag("C", carry);
+        this.write(addr & 0xffff, result);
+        this.setZeroAndNegativeFlags(result);
         break;
       }
 
