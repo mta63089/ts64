@@ -896,13 +896,66 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.A);
         break;
       }
+      case 0xbd: {
+        // LDA Absolute,X
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        this.A = this.read(addr & 0xffff);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0xb9: {
+        // LDA Absolute,Y
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.A = this.read(addr & 0xffff);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0xa1: {
+        // LDA (Indirect,X)
+        const zp = (this.read(this.PC++) + this.X) & 0xff;
+        const lo = this.read(zp);
+        const hi = this.read((zp + 1) & 0xff);
+        const addr = (hi << 8) | lo;
+        this.A = this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0xb1: {
+        // LDA (Indirect),Y
+        const zp = this.read(this.PC++);
+        const lo = this.read(zp);
+        const hi = this.read((zp + 1) & 0xff);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.A = this.read(addr & 0xffff);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+
       /**
        *    LDX - Load Index X with Memory
        */
       case 0xa2: {
-        // Immediate
+        // LDX Immediate
         const value = this.read(this.PC++);
         this.X = value;
+        this.setZeroAndNegativeFlags(this.X);
+        break;
+      }
+      case 0xa6: {
+        // LDX Zero Page
+        const addr = this.read(this.PC++);
+        this.X = this.read(addr);
+        this.setZeroAndNegativeFlags(this.X);
+        break;
+      }
+      case 0xb6: {
+        // LDX Zero Page,Y
+        const addr = (this.read(this.PC++) + this.Y) & 0xff;
+        this.X = this.read(addr);
         this.setZeroAndNegativeFlags(this.X);
         break;
       }
@@ -915,6 +968,58 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.X);
         break;
       }
+      case 0xbe: {
+        // LDX Absolute,Y
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.Y;
+        this.X = this.read(addr & 0xffff);
+        this.setZeroAndNegativeFlags(this.X);
+        break;
+      }
+      /**
+       *    LDY - Load Index Y with Memory
+       */
+      case 0xa0: {
+        // LDY Immediate
+        const value = this.read(this.PC++);
+        this.Y = value;
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      case 0xa4: {
+        // LDY Zero Page
+        const addr = this.read(this.PC++);
+        this.Y = this.read(addr);
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      case 0xb4: {
+        // LDY Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        this.Y = this.read(addr);
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      case 0xac: {
+        // LDY Absolute
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = (hi << 8) | lo;
+        this.Y = this.read(addr);
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+      case 0xbc: {
+        // LDY Absolute,X
+        const lo = this.read(this.PC++);
+        const hi = this.read(this.PC++);
+        const addr = ((hi << 8) | lo) + this.X;
+        this.Y = this.read(addr & 0xffff);
+        this.setZeroAndNegativeFlags(this.Y);
+        break;
+      }
+
       /**
        *    RTS - Return from Subroutine
        */

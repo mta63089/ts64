@@ -1171,6 +1171,57 @@ describe("6502 CPU", () => {
       expect(cpu.A).toBe(0x55);
       expect(cpu.PC).toBe(0x8002);
     });
+
+    test("LDA Zero Page,X loads A", () => {
+      cpu.X = 0x04;
+      cpu.memory[0x0046] = 0x77;
+      cpu.memory[0x8000] = 0xb5; // LDA $42,X
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.A).toBe(0x77);
+    });
+
+    test("LDA Absolute,X loads A", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x1235] = 0x33;
+      cpu.memory[0x8000] = 0xbd; // LDA $1234,X
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.A).toBe(0x33);
+    });
+
+    test("LDA Absolute,Y loads A", () => {
+      cpu.Y = 0x02;
+      cpu.memory[0x5678] = 0x22;
+      cpu.memory[0x8000] = 0xb9; // LDA $5676,Y
+      cpu.memory[0x8001] = 0x76;
+      cpu.memory[0x8002] = 0x56;
+      cpu.step();
+      expect(cpu.A).toBe(0x22);
+    });
+
+    test("LDA (Indirect,X) loads A", () => {
+      cpu.X = 0x04;
+      cpu.memory[0x0024] = 0x00;
+      cpu.memory[0x0025] = 0x90;
+      cpu.memory[0x9000] = 0xab;
+      cpu.memory[0x8000] = 0xa1; // LDA ($20,X)
+      cpu.memory[0x8001] = 0x20;
+      cpu.step();
+      expect(cpu.A).toBe(0xab);
+    });
+
+    test("LDA (Indirect),Y loads A", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x0030] = 0x00;
+      cpu.memory[0x0031] = 0x90;
+      cpu.memory[0x9001] = 0xcd;
+      cpu.memory[0x8000] = 0xb1; // LDA ($30),Y
+      cpu.memory[0x8001] = 0x30;
+      cpu.step();
+      expect(cpu.A).toBe(0xcd);
+    });
   });
 
   describe("LDX Tests", () => {
@@ -1192,6 +1243,93 @@ describe("6502 CPU", () => {
 
       expect(cpu.X).toBe(0xaa);
       expect(cpu.PC).toBe(0x8003);
+    });
+    test("LDX immediate", () => {
+      cpu.memory[0x8000] = 0xa2;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.X).toBe(0x42);
+    });
+
+    test("LDX zero page", () => {
+      cpu.memory[0x0042] = 0x99;
+      cpu.memory[0x8000] = 0xa6;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.X).toBe(0x99);
+    });
+
+    test("LDX zero page,Y", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x0043] = 0x55;
+      cpu.memory[0x8000] = 0xb6;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.X).toBe(0x55);
+    });
+
+    test("LDX absolute", () => {
+      cpu.memory[0x1234] = 0x10;
+      cpu.memory[0x8000] = 0xae;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.X).toBe(0x10);
+    });
+
+    test("LDX absolute,Y", () => {
+      cpu.Y = 0x01;
+      cpu.memory[0x1235] = 0x20;
+      cpu.memory[0x8000] = 0xbe;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.X).toBe(0x20);
+    });
+  });
+
+  describe("LDY Instructions", () => {
+    test("LDY immediate", () => {
+      cpu.memory[0x8000] = 0xa0;
+      cpu.memory[0x8001] = 0x55;
+      cpu.step();
+      expect(cpu.Y).toBe(0x55);
+    });
+
+    test("LDY zero page", () => {
+      cpu.memory[0x0042] = 0x66;
+      cpu.memory[0x8000] = 0xa4;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.Y).toBe(0x66);
+    });
+
+    test("LDY zero page,X", () => {
+      cpu.X = 0x03;
+      cpu.memory[0x0045] = 0x99;
+      cpu.memory[0x8000] = 0xb4;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.Y).toBe(0x99);
+    });
+
+    test("LDY absolute", () => {
+      cpu.memory[0x2000] = 0x33;
+      cpu.memory[0x8000] = 0xac;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x20;
+      cpu.step();
+      expect(cpu.Y).toBe(0x33);
+    });
+
+    test("LDY absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x2001] = 0x77;
+      cpu.memory[0x8000] = 0xbc;
+      cpu.memory[0x8001] = 0x00;
+      cpu.memory[0x8002] = 0x20;
+      cpu.step();
+      expect(cpu.Y).toBe(0x77);
     });
   });
 
