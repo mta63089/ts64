@@ -1396,6 +1396,82 @@ describe("6502 CPU", () => {
     });
   });
 
+  describe("ORA Instruction", () => {
+    test("ORA immediate sets A and flags", () => {
+      cpu.A = 0b00001100;
+      cpu.memory[0x8000] = 0x09;
+      cpu.memory[0x8001] = 0b00110000;
+      cpu.step();
+      expect(cpu.A).toBe(0b00111100);
+      expect(cpu.SR & 0x02).toBe(0); // Z = 0
+      expect(cpu.SR & 0x80).toBe(0); // N = 0
+    });
+
+    test("ORA zero page", () => {
+      cpu.A = 0b00001000;
+      cpu.memory[0x0042] = 0b11110000;
+      cpu.memory[0x8000] = 0x05;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.A).toBe(0b11111000);
+    });
+
+    test("ORA zero page,X", () => {
+      cpu.A = 0b00000001;
+      cpu.X = 0x01;
+      cpu.memory[0x0043] = 0b00000010;
+      cpu.memory[0x8000] = 0x15;
+      cpu.memory[0x8001] = 0x42;
+      cpu.step();
+      expect(cpu.A).toBe(0b00000011);
+    });
+
+    test("ORA absolute", () => {
+      cpu.A = 0b00000001;
+      cpu.memory[0x1234] = 0b00000010;
+      cpu.memory[0x8000] = 0x0d;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.A).toBe(0b00000011);
+    });
+
+    test("ORA absolute,X", () => {
+      cpu.A = 0b00000010;
+      cpu.X = 1;
+      cpu.memory[0x1235] = 0b00000001;
+      cpu.memory[0x8000] = 0x1d;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.A).toBe(0b00000011);
+    });
+
+    test("ORA (Indirect,X)", () => {
+      cpu.A = 0b00001000;
+      cpu.X = 4;
+      cpu.memory[0x0004 + 0x10] = 0x00;
+      cpu.memory[0x0005 + 0x10] = 0x90;
+      cpu.memory[0x9000] = 0b00000111;
+      cpu.memory[0x8000] = 0x01;
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+      expect(cpu.A).toBe(0b00001111);
+    });
+
+    test("ORA (Indirect),Y", () => {
+      cpu.A = 0b11110000;
+      cpu.Y = 1;
+      cpu.memory[0x0010] = 0x00;
+      cpu.memory[0x0011] = 0x90;
+      cpu.memory[0x9001] = 0b00001111;
+      cpu.memory[0x8000] = 0x11;
+      cpu.memory[0x8001] = 0x10;
+      cpu.step();
+      expect(cpu.A).toBe(0b11111111);
+    });
+  });
+
   describe("STA Tests", () => {
     test("STA absolute stores accumulator into memory", () => {
       cpu.A = 0x99;

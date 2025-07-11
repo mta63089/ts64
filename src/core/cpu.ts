@@ -131,9 +131,15 @@ export class CPU {
     this.memory[addr] = value;
   }
 
-  readWord(addr: number) {
+  private readWord(addr: number) {
     const lo = this.read(addr);
     const hi = this.read(addr + 1);
+    return (hi << 8) | lo;
+  }
+
+  private readWordAtPC(): number {
+    const lo = this.read(this.PC++);
+    const hi = this.read(this.PC++);
     return (hi << 8) | lo;
   }
 
@@ -708,7 +714,6 @@ export class CPU {
       /**
        *    EOR - Exclusive-OR Memory with Accumulator
        */
-
       // EOR Immediate
       case 0x49: {
         const value = this.read(this.PC++);
@@ -1082,6 +1087,69 @@ export class CPU {
         this.setFlag("C", carry);
         this.write(addr & 0xffff, result);
         this.setZeroAndNegativeFlags(result);
+        break;
+      }
+      /**
+       *    ORA - OR Memory with Accumulator
+       */
+      case 0x09: {
+        // ORA Immediate
+        const value = this.read(this.PC++);
+        this.A |= value;
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x05: {
+        // ORA Zero Page
+        const addr = this.read(this.PC++);
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x15: {
+        // ORA Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x0d: {
+        // ORA Absolute
+        const addr = this.readWordAtPC();
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x1d: {
+        // ORA Absolute,X
+        const addr = (this.readWordAtPC() + this.X) & 0xffff;
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x19: {
+        // ORA Absolute,Y
+        const addr = (this.readWordAtPC() + this.Y) & 0xffff;
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x01: {
+        // ORA (Indirect,X)
+        const zpAddr = (this.read(this.PC++) + this.X) & 0xff;
+        const addr = this.read(zpAddr) | (this.read((zpAddr + 1) & 0xff) << 8);
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      case 0x11: {
+        // ORA (Indirect),Y
+        const zpAddr = this.read(this.PC++);
+        const baseAddr =
+          this.read(zpAddr) | (this.read((zpAddr + 1) & 0xff) << 8);
+        const addr = (baseAddr + this.Y) & 0xffff;
+        this.A |= this.read(addr);
+        this.setZeroAndNegativeFlags(this.A);
         break;
       }
 
