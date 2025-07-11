@@ -121,6 +121,41 @@ export class CPU {
     return this.memory[addr];
   }
 
+  private rotateLeft(value: number): number {
+    const carryIn = this.SR & 0x01;
+    const result = ((value << 1) | carryIn) & 0xff;
+    this.SR = (this.SR & ~0x01) | (value & 0x80 ? 0x01 : 0);
+    this.setZeroAndNegativeFlags(result);
+    return result;
+  }
+
+  private rotateRight(value: number): number {
+    const carryIn = (this.SR & 0x01) << 7;
+    const result = ((value >> 1) | carryIn) & 0xff;
+    this.SR = (this.SR & ~0x01) | (value & 0x01);
+    this.setZeroAndNegativeFlags(result);
+    return result;
+  }
+
+  private sbc(value: number) {
+    const inverted = value ^ 0xff;
+
+    const sum = this.A + inverted + (this.SR & 0x01);
+    const result = sum & 0xff;
+
+    // Set carry if no borrow occurred
+    if (sum > 0xff) this.SR |= 0x01;
+    else this.SR &= ~0x01;
+
+    // Overflow: if sign bit changed incorrectly
+    const overflow = ~(this.A ^ inverted) & (this.A ^ result) & 0x80;
+    if (overflow) this.SR |= 0x40;
+    else this.SR &= ~0x40;
+
+    this.A = result;
+    this.setZeroAndNegativeFlags(this.A);
+  }
+
   private setFlag(flag: "C" | "Z" | "N", value: number) {
     const mask = { C: 0x01, Z: 0x02, N: 0x80 }[flag];
     if (value) this.SR |= mask;
@@ -1189,6 +1224,86 @@ export class CPU {
       /**
        *    ROL - Rotate one Bit Left
        */
+      case 0x2a: // ROL A
+        this.A = this.rotateLeft(this.A);
+        break;
+
+      case 0x26: {
+        // ROL zeropage
+        const addr = this.read(this.PC++);
+        const value = this.read(addr);
+        this.write(addr, this.rotateLeft(value));
+        break;
+      }
+
+      case 0x36: {
+        // ROL zeropage,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        const value = this.read(addr);
+        this.write(addr, this.rotateLeft(value));
+        break;
+      }
+
+      case 0x2e: {
+        // ROL absolute
+        const addr = this.readWord(this.PC);
+        this.PC += 2;
+        const value = this.read(addr);
+        this.write(addr, this.rotateLeft(value));
+        break;
+      }
+
+      case 0x3e: {
+        // ROL absolute,X
+        const addr = (this.readWord(this.PC) + this.X) & 0xffff;
+        this.PC += 2;
+        const value = this.read(addr);
+        this.write(addr, this.rotateLeft(value));
+        break;
+      }
+      /**
+       *    ROR - Rotate one Bit Right
+       */
+      case 0x6a: // ROR A
+        this.A = this.rotateRight(this.A);
+        break;
+
+      case 0x66: {
+        // ROR zeropage
+        const addr = this.read(this.PC++);
+        const value = this.read(addr);
+        this.write(addr, this.rotateRight(value));
+        break;
+      }
+
+      case 0x76: {
+        // ROR zeropage,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        const value = this.read(addr);
+        this.write(addr, this.rotateRight(value));
+        break;
+      }
+
+      case 0x6e: {
+        // ROR absolute
+        const addr = this.readWord(this.PC);
+        this.PC += 2;
+        const value = this.read(addr);
+        this.write(addr, this.rotateRight(value));
+        break;
+      }
+
+      case 0x7e: {
+        // ROR absolute,X
+        const addr = (this.readWord(this.PC) + this.X) & 0xffff;
+        this.PC += 2;
+        const value = this.read(addr);
+        this.write(addr, this.rotateRight(value));
+        break;
+      }
+      /**
+       *    RTI - Return from Interrupt
+       */
       /**
        *    RTS - Return from Subroutine
        */
@@ -1199,18 +1314,143 @@ export class CPU {
         break;
       }
       /**
+       *    SBC - Subtract Memory from Accumulator with Borrow
+       */
+      case 0xe9: {
+        // SBC Immediate
+        const value = this.read(this.PC++);
+        this.sbc(value);
+        break;
+      }
+      case 0xe5: {
+        // SBC Zero Page
+        const addr = this.read(this.PC++);
+        const value = this.read(addr);
+        this.sbc(value);
+        break;
+      }
+      case 0xf5: {
+        // SBC Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        const value = this.read(addr);
+        this.sbc(value);
+        break;
+      }
+      case 0xed: {
+        // SBC Absolute
+        const addr = this.readWord(this.PC);
+        this.PC += 2;
+        const value = this.read(addr);
+        this.sbc(value);
+        break;
+      }
+      case 0xfd: {
+        // SBC Absolute,X
+        const addr = (this.readWord(this.PC) + this.X) & 0xffff;
+        this.PC += 2;
+        const value = this.read(addr);
+        this.sbc(value);
+        break;
+      }
+      case 0xf9: {
+        // SBC Absolute,Y
+        const addr = (this.readWord(this.PC) + this.Y) & 0xffff;
+        this.PC += 2;
+        const value = this.read(addr);
+        this.sbc(value);
+        break;
+      }
+      case 0xe1: {
+        // SBC (Indirect,X)
+        const zpAddr = (this.read(this.PC++) + this.X) & 0xff;
+        const addr = this.read(zpAddr) | (this.read((zpAddr + 1) & 0xff) << 8);
+        const value = this.read(addr);
+        this.sbc(value);
+        break;
+      }
+      case 0xf1: {
+        // SBC (Indirect),Y
+        const zpAddr = this.read(this.PC++);
+        const addr =
+          (this.read(zpAddr) | (this.read((zpAddr + 1) & 0xff) << 8)) + this.Y;
+        const value = this.read(addr & 0xffff);
+        this.sbc(value);
+        break;
+      }
+
+      /**
+       *    SEC - Set Carry Flag
+       */
+      case 0x38: {
+        this.SR |= 0x01; // Set Carry flag
+        break;
+      }
+      /**
+       *    SED - Set Decimal Flag
+       */
+      case 0xf8: {
+        this.SR |= 0x08; // Set Decimal flag
+        break;
+      }
+      /**
+       *    SEI - Set Interrupt Disable Status
+       */
+      case 0x78: {
+        this.SR |= 0x04; // Set Interrupt Disable flag
+        break;
+      }
+      /**
        *    STA - Store Accumulator in Memory
        */
-      case 0x8d: {
-        // STA Absolute
-        // This reads the next 2 bytes as an address (low byte first), and writes
-        // the contents of the accumulator (A) to that memory location.
-        const lo = this.read(this.PC++);
-        const hi = this.read(this.PC++);
-        const addr = (hi << 8) | lo;
+      case 0x85: {
+        // STA Zero Page
+        const addr = this.read(this.PC++);
         this.write(addr, this.A);
         break;
       }
+      case 0x95: {
+        // STA Zero Page,X
+        const addr = (this.read(this.PC++) + this.X) & 0xff;
+        this.write(addr, this.A);
+        break;
+      }
+      case 0x8d: {
+        // STA Absolute
+        const addr = this.readWord(this.PC);
+        this.PC += 2;
+        this.write(addr, this.A);
+        break;
+      }
+      case 0x9d: {
+        // STA Absolute,X
+        const addr = (this.readWord(this.PC) + this.X) & 0xffff;
+        this.PC += 2;
+        this.write(addr, this.A);
+        break;
+      }
+      case 0x99: {
+        // STA Absolute,Y
+        const addr = (this.readWord(this.PC) + this.Y) & 0xffff;
+        this.PC += 2;
+        this.write(addr, this.A);
+        break;
+      }
+      case 0x81: {
+        // STA (Indirect,X)
+        const zpAddr = (this.read(this.PC++) + this.X) & 0xff;
+        const addr = this.read(zpAddr) | (this.read((zpAddr + 1) & 0xff) << 8);
+        this.write(addr, this.A);
+        break;
+      }
+      case 0x91: {
+        // STA (Indirect),Y
+        const zpAddr = this.read(this.PC++);
+        const addr =
+          (this.read(zpAddr) | (this.read((zpAddr + 1) & 0xff) << 8)) + this.Y;
+        this.write(addr & 0xffff, this.A);
+        break;
+      }
+
       /**
        *    STX - Store Index X in Memory
        */

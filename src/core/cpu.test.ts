@@ -1472,7 +1472,7 @@ describe("6502 CPU", () => {
     });
   });
 
-  describe("PHP/PHP/PLA/PHA Stack Instructions", () => {
+  describe("PHP/PLA/PHA Stack Instructions", () => {
     test("PHA pushes A to stack", () => {
       cpu.A = 0x42;
       const spBefore = cpu.SP;
@@ -1510,6 +1510,119 @@ describe("6502 CPU", () => {
 
       // Expect SR to be 0x65 = 0b01100101 (bit 5 set, bit 4 unchanged or forced off)
       expect(cpu.SR).toBe((0b01000101 & 0xef) | 0x20);
+    });
+  });
+
+  describe("ROL/ROR Instructions", () => {
+    test("ROL Accumulator", () => {
+      cpu.A = 0b01010101;
+      cpu.SR |= 0x01; // Carry = 1
+      cpu.memory[0x8000] = 0x2a; // ROL A
+      cpu.step();
+      expect(cpu.A).toBe(0b10101011);
+      expect(cpu.SR & 0x01).toBe(0); // Old bit 7 = 0
+    });
+
+    test("ROR Accumulator", () => {
+      cpu.A = 0b10101010;
+      cpu.SR &= ~0x01; // Carry = 0
+      cpu.memory[0x8000] = 0x6a; // ROR A
+      cpu.step();
+      expect(cpu.A).toBe(0b01010101);
+      expect(cpu.SR & 0x01).toBe(0); // Old bit 0 = 0
+    });
+
+    test("ROL Zero Page", () => {
+      cpu.memory[0x0040] = 0x80;
+      cpu.SR |= 0x01; // Carry = 1
+      cpu.memory[0x8000] = 0x26;
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.read(0x0040)).toBe(0x01);
+      expect(cpu.SR & 0x01).toBe(0x01); // Bit 7 was 1 → Carry = 1
+    });
+
+    test("ROR Zero Page,X", () => {
+      cpu.X = 1;
+      cpu.memory[0x0041] = 0x01;
+      cpu.SR |= 0x01; // Carry = 1
+      cpu.memory[0x8000] = 0x76;
+      cpu.memory[0x8001] = 0x40;
+      cpu.step();
+      expect(cpu.read(0x0041)).toBe(0x80);
+      expect(cpu.SR & 0x01).toBe(0x01); // Old bit 0 was 1 → Carry = 1
+    });
+
+    test("ROL Absolute", () => {
+      cpu.memory[0x1234] = 0xff;
+      cpu.SR &= ~0x01; // Clear Carry
+      cpu.memory[0x8000] = 0x2e;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.read(0x1234)).toBe(0xfe);
+      expect(cpu.SR & 0x01).toBe(0x01);
+    });
+
+    test("ROR Absolute,X", () => {
+      cpu.X = 0x01;
+      cpu.memory[0x1235] = 0x02;
+      cpu.SR &= ~0x01;
+      cpu.memory[0x8000] = 0x7e;
+      cpu.memory[0x8001] = 0x34;
+      cpu.memory[0x8002] = 0x12;
+      cpu.step();
+      expect(cpu.read(0x1235)).toBe(0x01);
+      expect(cpu.SR & 0x01).toBe(0x00);
+    });
+  });
+  describe("SBC, SEC, SED, SEI Instructions", () => {
+    beforeEach(() => {
+      cpu.reset();
+    });
+
+    test("SEC sets carry flag", () => {
+      cpu.SR &= ~0x01; // Clear carry
+      cpu.memory[0x8000] = 0x38; // SEC
+      cpu.step();
+      expect(cpu.SR & 0x01).toBe(0x01);
+    });
+
+    test("SED sets decimal flag", () => {
+      cpu.SR &= ~0x08; // Clear decimal
+      cpu.memory[0x8000] = 0xf8; // SED
+      cpu.step();
+      expect(cpu.SR & 0x08).toBe(0x08);
+    });
+
+    test("SEI sets interrupt disable flag", () => {
+      cpu.SR &= ~0x04; // Clear interrupt disable
+      cpu.memory[0x8000] = 0x78; // SEI
+      cpu.step();
+      expect(cpu.SR & 0x04).toBe(0x04);
+    });
+
+    test("SBC immediate subtracts correctly and updates flags", () => {
+      cpu.A = 0x50;
+      cpu.SR |= 0x01; // Carry set
+      cpu.memory[0x8000] = 0xe9; // SBC immediate
+      cpu.memory[0x8001] = 0x10; // value 0x10
+      cpu.step();
+      expect(cpu.A).toBe(0x40); // 0x50 - 0x10 = 0x40
+      expect(cpu.SR & 0x01).toBe(0x01); // Carry set (no borrow)
+      expect(cpu.SR & 0x02).toBe(0); // Zero clear
+      expect(cpu.SR & 0x80).toBe(0); // Negative clear
+    });
+
+    test("SBC immediate causes borrow and clears carry", () => {
+      cpu.A = 0x10;
+      cpu.SR |= 0x01; // Carry set
+      cpu.memory[0x8000] = 0xe9; // SBC immediate
+      cpu.memory[0x8001] = 0x20; // value 0x20
+      cpu.step();
+      expect(cpu.A).toBe(0xf0); // 0x10 - 0x20 = -0x10 (0xF0 2's complement)
+      expect(cpu.SR & 0x01).toBe(0); // Carry clear (borrow)
+      expect(cpu.SR & 0x80).toBe(0x80); // Negative set
     });
   });
 
