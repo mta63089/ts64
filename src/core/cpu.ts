@@ -98,12 +98,12 @@ export class CPU {
     this.setZeroAndNegativeFlags(this.A);
   }
 
-  private push(value: number) {
+  push(value: number) {
     this.write(0x0100 + this.SP, value);
     this.SP = (this.SP - 1) & 0xff;
   }
 
-  private pull(): number {
+  pull(): number {
     this.SP = (this.SP + 1) & 0xff;
     return this.read(0x0100 + this.SP);
   }
@@ -131,13 +131,13 @@ export class CPU {
     this.memory[addr] = value;
   }
 
-  private readWord(addr: number) {
+  readWord(addr: number) {
     const lo = this.read(addr);
     const hi = this.read(addr + 1);
     return (hi << 8) | lo;
   }
 
-  private readWordAtPC(): number {
+  readWordAtPC(): number {
     const lo = this.read(this.PC++);
     const hi = this.read(this.PC++);
     return (hi << 8) | lo;
@@ -1152,7 +1152,43 @@ export class CPU {
         this.setZeroAndNegativeFlags(this.A);
         break;
       }
+      /**
+       *    PHA - Push Accumulator on Stack
+       */
+      case 0x48: {
+        // PHA - Push Accumulator
+        this.push(this.A);
+        break;
+      }
 
+      /**
+       *    PHP - Push Processor Status on Stack
+       */
+      case 0x08: {
+        // PHP - Push Processor Status
+        this.push(this.SR | 0x30); // Set bits 4 and 5 (B + unused)
+        break;
+      }
+      /**
+       *    PLA - Pull Accumulator from Stack
+       */
+      case 0x68: {
+        // PLA - Pull Accumulator
+        this.A = this.pull();
+        this.setZeroAndNegativeFlags(this.A);
+        break;
+      }
+      /**
+       *    PLP - Pull Processor Status from Stack
+       */
+      case 0x28: {
+        // PLP - Pull Processor Status
+        this.SR = (this.pull() & 0xef) | 0x20; // Clear bit 4 (break), set bit 5 (unused)
+        break;
+      }
+      /**
+       *    ROL - Rotate one Bit Left
+       */
       /**
        *    RTS - Return from Subroutine
        */

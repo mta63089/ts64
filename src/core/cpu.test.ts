@@ -1472,6 +1472,47 @@ describe("6502 CPU", () => {
     });
   });
 
+  describe("PHP/PHP/PLA/PHA Stack Instructions", () => {
+    test("PHA pushes A to stack", () => {
+      cpu.A = 0x42;
+      const spBefore = cpu.SP;
+      cpu.memory[0x8000] = 0x48; // PHA
+      cpu.step();
+
+      expect(cpu.read(0x0100 + spBefore)).toBe(0x42);
+      expect(cpu.SP).toBe((spBefore - 1) & 0xff);
+    });
+
+    test("PHP pushes status register to stack", () => {
+      cpu.SR = 0b11001100;
+      const spBefore = cpu.SP;
+      cpu.memory[0x8000] = 0x08; // PHP
+      cpu.step();
+
+      expect(cpu.read(0x0100 + spBefore)).toBe(0b11001100 | 0x30); // bits 4 and 5 always set
+      expect(cpu.SP).toBe((spBefore - 1) & 0xff);
+    });
+
+    test("PLA pulls from stack into A", () => {
+      cpu.push(0x99);
+      cpu.memory[0x8000] = 0x68; // PLA
+      cpu.step();
+
+      expect(cpu.A).toBe(0x99);
+      expect(cpu.SR & 0x02).toBe(0); // Z = 0
+      expect(cpu.SR & 0x80).toBe(0x80); // N = 1
+    });
+
+    test("PLP pulls from stack into status register", () => {
+      cpu.push(0b01000101); // Value with B = 0, bit 5 = 1
+      cpu.memory[0x8000] = 0x28; // PLP
+      cpu.step();
+
+      // Expect SR to be 0x65 = 0b01100101 (bit 5 set, bit 4 unchanged or forced off)
+      expect(cpu.SR).toBe((0b01000101 & 0xef) | 0x20);
+    });
+  });
+
   describe("STA Tests", () => {
     test("STA absolute stores accumulator into memory", () => {
       cpu.A = 0x99;
